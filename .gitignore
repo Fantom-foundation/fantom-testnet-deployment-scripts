@@ -1,0 +1,4 @@
+.DS_Store
+go-lachesis.service
+testnet/lachesis_data_dir
+testnet/genesis.json
