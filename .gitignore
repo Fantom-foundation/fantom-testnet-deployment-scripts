@@ -2,3 +2,5 @@
 go-lachesis.service
 testnet/lachesis_data_dir
 testnet/genesis.json
+lachesis_data_dir
+genesis.json

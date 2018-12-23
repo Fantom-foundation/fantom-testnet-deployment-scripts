@@ -1,27 +1,37 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash -euo pipefail
 
-shopt -s extglob
+shopt -s extglob;
 
-nodes=('172.31.24.139' '172.31.22.8' '172.31.29.235' '172.31.30.77' '172.31.25.228')
+declare -r DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
+declare -r parent_dir="${DIR%/*}";
 
-declare -r service_file='go-lachesis.service'
+declare -ar nodes=('172.31.24.139' '172.31.22.8' '172.31.29.235' '172.31.30.77' '172.31.25.228');
 
-for i in $(seq 0 4); do
-  echo Node"$i":
+declare -r go_lachesis_service_file='go-lachesis.service';
+declare -r evm_service_file='go-evm.service'
 
-  scp scripts/testnet.bash testnet"$i":go/src/github.com/Fantom-foundation/go-lachesis/scripts/
-  scp -r testnet/lachesis_data_dir testnet"$i":/mnt/data/
-  ssh -t testnet"$i" "mkdir -p ~/.evm/eth"
-  scp -r testnet/genesis.json testnet"$i":.evm/eth/
+function deploy() {
+  printf 'Deploying testnet%d [%s]:\n' "$1" "${nodes[$1]}";
 
-  # Service setup
-  env -i PATH="$PATH" BUILD_DIR='/home/ubuntu/go/src/github.com/Fantom-foundation/go-lachesis' NODE="$i" NODE_ADDR="${nodes[$i]}" envsubst < go-lachesis.tpl.service > "$service_file"
-  scp "$service_file" testnet"$i":/tmp/go-lachesis.service
-  ssh -X testnet"$i" 'sudo mv /tmp/go-lachesis.service /lib/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl start go-lachesis'
+  # Config
+  rsync -avz "$parent_dir"/scripts/testnet.bash testnet"$1":/home/ubuntu/go/src/github.com/Fantom-foundation/go-lachesis/scripts/;
+  rsync -avz "$parent_dir"/testnet/lachesis_data_dir testnet"$1":/mnt/data/ --rsync-path='sudo rsync';
+  ssh testnet"$1" "mkdir -p ~/.evm/eth";
+  rsync -avz "$parent_dir"/testnet/genesis.json testnet"$1":/home/ubuntu/.evm/eth/;
+
+  # Lachesis
+  declare -r go_lachesis='go-lachesis';
+  env -i PATH="$PATH" BUILD_DIR='/home/ubuntu/go/src/github.com/Fantom-foundation/'"$go_lachesis" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-lachesis.tpl.service > "$parent_dir"/"$go_lachesis_service_file";
+  rsync -avz "$parent_dir"/"$go_lachesis_service_file" testnet"$1":/tmp/go-lachesis.service;
+  ssh testnet"$1" "sudo mv /tmp/$go_lachesis.service /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )";
 
   # EVM
-  ssh -X testnet"$i" "cd go/src/github.com/Fantom-foundation/go-evm; screen -d -m build/evm run --proxy=${nodes[$i]}:9000"
-done
+  declare -r go_evm='go-evm';
+  env -i PATH="$PATH" BUILD_DIR='/home/ubuntu/go/src/github.com/Fantom-foundation/'"$go_evm" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/evm.tpl.service > "$parent_dir"/"$evm_service_file";
+  rsync -avz "$parent_dir"/"$evm_service_file" testnet"$1":/tmp/"$evm_service_file";
+  ssh testnet"$1" "cd go/src/github.com/Fantom-foundation/$go_evm; [ -f build/evm ] || make build; sudo mv /tmp/$go_evm.service /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )";
+}
 
-# Previous solution (to go-lachesis service)
-# ssh -X testnet"$i" "cd go/src/github.com/Fantom-foundation/go-lachesis; rm -rf /mnt/data/lachesis_data_dir/$i/badger/ ; BUILD_DIR="$PWD" DATAL_DIR=/mnt/data node=0 node_addr=172.31.24.139 screen -d -m ./scripts/testnet.bash"
+for i in "${!nodes[@]}"; do
+  deploy "$i" &
+done
