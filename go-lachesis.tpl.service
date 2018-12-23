@@ -12,8 +12,7 @@ Environment=node_addr=$NODE_ADDR
 Environment=GOPATH=/home/ubuntu/go
 Environment=GOMAXPROCS=2
 WorkingDirectory=$BUILD_DIR
-ExecStartPre=/bin/bash -c '[ -f build/lachesis ] || make build'
-ExecStart=build/lachesis_linux run --datadir "$DATAL_DIR/lachesis_data_dir/$NODE" --store --listen="$NODE_ADDR":12000 --log=warn --heartbeat=5s -p "$NODE_ADDR":9000 -s "$NODE_ADDR":9090
+ExecStart=$BUILD_DIR/lachesis run --datadir "$DATAL_DIR/lachesis_data_dir/$NODE" --store --listen="$NODE_ADDR":12000 --log=warn --heartbeat=5s -p "$NODE_ADDR":9000 -s "$NODE_ADDR":9090
 ExecStop=pkill -SIGTERM -F /var/run/go-lachesis.pid
 Restart=always
 

@@ -11,8 +11,7 @@ Environment=node=$NODE
 Environment=node_addr=$NODE_ADDR
 Environment=GOPATH=/home/ubuntu/go
 WorkingDirectory=$BUILD_DIR
-ExecStartPre=/bin/bash -c '[ -f build/evm ] || make build'
-ExecStart=build/evm run --proxy=$NODE_ADDR:9000
+ExecStart=$BUILD_DIR/evm run --proxy=$NODE_ADDR:9000
 ExecStop=pkill -SIGTERM -F /var/run/go-evm.pid
 Restart=always
 
