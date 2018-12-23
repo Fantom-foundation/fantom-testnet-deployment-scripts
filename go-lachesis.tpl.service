@@ -6,12 +6,14 @@ After=syslog.target network.target
 Type=forking
 PIDFile=/var/run/go-lachesis.pid
 Environment=BUILD_DIR=$BUILD_DIR
-Environment=DATAL_DIR=/mnt/data
+Environment=DATAL_DIR=$DATAL_DIR
 Environment=node=$NODE
 Environment=node_addr=$NODE_ADDR
 Environment=GOPATH=/home/ubuntu/go
+Environment=GOMAXPROCS=2
 WorkingDirectory=$BUILD_DIR
-ExecStart=/bin/bash $BUILD_DIR/scripts/testnet.bash
+ExecStartPre=/bin/bash -c '[ -f build/lachesis ] || make build'
+ExecStart=build/lachesis_linux run --datadir "$DATAL_DIR/lachesis_data_dir/$NODE" --store --listen="$NODE_ADDR":12000 --log=warn --heartbeat=5s -p "$NODE_ADDR":9000 -s "$NODE_ADDR":9090
 ExecStop=pkill -SIGTERM -F /var/run/go-lachesis.pid
 Restart=always
 

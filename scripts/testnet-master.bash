@@ -1,7 +1,5 @@
 #!/usr/bin/env bash -euo pipefail
 
-shopt -s extglob;
-
 declare -r DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 declare -r parent_dir="${DIR%/*}";
 
@@ -21,7 +19,7 @@ function deploy() {
 
   # Lachesis
   declare -r go_lachesis='go-lachesis';
-  env -i PATH="$PATH" BUILD_DIR='/home/ubuntu/go/src/github.com/Fantom-foundation/'"$go_lachesis" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-lachesis.tpl.service > "$parent_dir"/"$go_lachesis_service_file";
+  env -i PATH="$PATH" DATAL_DIR='/mnt/data' BUILD_DIR='/home/ubuntu/go/src/github.com/Fantom-foundation/'"$go_lachesis" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-lachesis.tpl.service > "$parent_dir"/"$go_lachesis_service_file";
   rsync -avz "$parent_dir"/"$go_lachesis_service_file" testnet"$1":/tmp/go-lachesis.service;
   ssh testnet"$1" "sudo mv /tmp/$go_lachesis.service /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )";
 
