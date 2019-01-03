@@ -3,7 +3,9 @@ Description=Ethereum Virtual Machine daemon
 After=syslog.target network.target
 
 [Service]
-Type=forking
+Type=simple
+User=ubuntu
+Group=ubuntu
 # PIDFile=/var/run/go-evm.pid
 Environment=BUILD_DIR=$BUILD_DIR
 Environment=DATAL_DIR=/mnt/data
