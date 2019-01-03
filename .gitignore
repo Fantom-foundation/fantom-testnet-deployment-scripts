@@ -1,7 +1,3 @@
 .DS_Store
 go-lachesis.service*
 go-evm.service*
-testnet/lachesis_data_dir
-testnet/genesis.json
-#lachesis_data_dir
-#genesis.json
