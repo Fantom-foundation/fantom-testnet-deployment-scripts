@@ -3,7 +3,7 @@
 declare -r DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 declare -r parent_dir="${DIR%/*}";
 
-declare -ar nodes=('172.31.17.72' '172.31.24.196' '172.31.24.231' '172.31.31.228' '172.31.16.109');
+declare -ar nodes=('172.31.6.65' '172.31.8.33' '172.31.5.183' '172.31.3.125' '172.31.1.84');
 
 declare -r go_lachesis_service_file='go-lachesis.service';
 declare -r evm_service_file='go-evm.service'
