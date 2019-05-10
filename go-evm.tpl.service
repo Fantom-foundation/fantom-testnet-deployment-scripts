@@ -13,7 +13,7 @@ Environment=node=$NODE
 Environment=node_addr=$NODE_ADDR
 Environment=GOPATH=/home/ubuntu/go
 WorkingDirectory=$BUILD_DIR
-ExecStart=$BUILD_DIR/evm run --proxy=$NODE_ADDR:9000
+ExecStart=$BUILD_DIR/evm run --proxy=$NODE_ADDR:9000 --eth.genesis=/home/ubuntu/.evm/eth/genesis.json
 # --pidfile /var/run/go-evm.pid
 # ExecStop=pkill -SIGTERM -F /var/run/go-evm.pid
 Restart=always
