@@ -24,7 +24,7 @@ function deploy() {
   declare -r lachesis_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_lachesis";
   env -i PATH="$PATH" DATAL_DIR='/mnt/data' BUILD_DIR="$lachesis_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/dag1.tpl.service > "$parent_dir"/"$go_lachesis_service_file"."$1";
   rsync -avz "$parent_dir"/"$go_lachesis_service_file"."$1" testnet"$1":/mnt/data/"$go_lachesis_service_file";
-  ssh testnet"$1" "cd $lachesis_dir; [ -f build/lachesis ] || make vendor build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
+  ssh testnet"$1" "cd $lachesis_dir; [ -f build/lachesis ] || make clean vendor build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
   sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )" | sed "s/^/[${nodes[$1]}] /";
 
   # EVM
@@ -32,7 +32,7 @@ function deploy() {
   declare -r evm_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_evm";
   env -i PATH="$PATH" BUILD_DIR="$evm_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-evm.tpl.service > "$parent_dir"/"$evm_service_file"."$1";
   rsync -avz "$parent_dir"/"$evm_service_file"."$1" testnet"$1":/mnt/data/"$evm_service_file";
-  ssh testnet"$1" "cd $evm_dir; [ -f evm ] || make vendor build; sudo mv /mnt/data/$evm_service_file /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )" | sed "s/^/[${nodes[$1]}] /";
+  ssh testnet"$1" "cd $evm_dir; [ -f evm ] || make clean vendor build; sudo mv /mnt/data/$evm_service_file /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )" | sed "s/^/[${nodes[$1]}] /";
 }
 
 function init() {
