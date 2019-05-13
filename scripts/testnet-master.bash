@@ -9,6 +9,8 @@ declare -ar nodes=('172.31.6.65' '172.31.8.33' '172.31.5.183' '172.31.3.125' '17
 
 declare -r go_lachesis_service_file='dag1.service';
 declare -r evm_service_file='go-evm.service'
+declare -r go_lachesis_branch='master'
+declare -r evm_branch='master'
 
 function deploy() {
   printf 'Deploying testnet%d [%s]:\n' "$1" "${nodes[$1]}";
@@ -24,7 +26,7 @@ function deploy() {
   declare -r lachesis_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_lachesis";
   env -i PATH="$PATH" DATAL_DIR='/mnt/data' BUILD_DIR="$lachesis_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/dag1.tpl.service > "$parent_dir"/"$go_lachesis_service_file"."$1";
   rsync -avz "$parent_dir"/"$go_lachesis_service_file"."$1" testnet"$1":/mnt/data/"$go_lachesis_service_file";
-  ssh testnet"$1" "cd $lachesis_dir; git pull && make clean vendor build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
+  ssh testnet"$1" "cd $lachesis_dir; sudo apt  install -y protobuf-compiler golang-goprotobuf-dev && git clean -fd && git checkout $go_lachesis_branch && git pull && make clean vendor proto build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
   sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )" | sed "s/^/[${nodes[$1]}] /";
 
   # EVM
@@ -32,7 +34,7 @@ function deploy() {
   declare -r evm_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_evm";
   env -i PATH="$PATH" BUILD_DIR="$evm_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-evm.tpl.service > "$parent_dir"/"$evm_service_file"."$1";
   rsync -avz "$parent_dir"/"$evm_service_file"."$1" testnet"$1":/mnt/data/"$evm_service_file";
-  ssh testnet"$1" "cd $evm_dir; git pull && make clean vendor build; sudo mv /mnt/data/$evm_service_file /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )" | sed "s/^/[${nodes[$1]}] /";
+  ssh testnet"$1" "cd $evm_dir; git clean -fd && git checkout $evm_branch && git pull && make clean vendor build; sudo mv /mnt/data/$evm_service_file /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )" | sed "s/^/[${nodes[$1]}] /";
 }
 
 function init() {
