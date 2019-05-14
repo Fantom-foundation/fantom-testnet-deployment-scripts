@@ -10,7 +10,7 @@ declare -ar nodes=('172.31.6.65' '172.31.8.33' '172.31.5.183' '172.31.3.125' '17
 declare -r go_lachesis_service_file='dag1.service';
 declare -r evm_service_file='go-evm.service'
 declare -r go_lachesis_branch='master'
-declare -r evm_branch='master'
+declare -r evm_branch="${BRANCH:-master}"
 
 function deploy() {
   printf 'Deploying testnet%d [%s]:\n' "$1" "${nodes[$1]}";
@@ -26,7 +26,7 @@ function deploy() {
   declare -r lachesis_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_lachesis";
   env -i PATH="$PATH" DATAL_DIR='/mnt/data' BUILD_DIR="$lachesis_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/dag1.tpl.service > "$parent_dir"/"$go_lachesis_service_file"."$1";
   rsync -avz "$parent_dir"/"$go_lachesis_service_file"."$1" testnet"$1":/mnt/data/"$go_lachesis_service_file";
-  ssh testnet"$1" "cd $lachesis_dir; sudo apt  install -y protobuf-compiler golang-goprotobuf-dev && git clean -fd && git checkout $go_lachesis_branch && git pull && make clean vendor proto build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
+  ssh testnet"$1" "cd $lachesis_dir; git clean -fd && git checkout $go_lachesis_branch && git pull && make clean vendor proto build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
   sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )" | sed "s/^/[${nodes[$1]}] /";
 
   # EVM
@@ -38,8 +38,25 @@ function deploy() {
 }
 
 function init() {
-  ssh testnet"$1" 'if ! $(df -h | grep -q /mnt/data); then sudo rm -rfv /mnt/data; sleep 1s && ( export ssd=`lsblk | grep 1.8T | sed -e "s/\s.*$//"` ; echo $ssd ; sudo mkfs -t ext4 /dev/$ssd; sudo mkdir /mnt/data; sudo mount /dev/$ssd /mnt/data; sudo chown -R ubuntu:ubuntu /mnt/data/ ); fi';
+    ssh testnet"$1" 'if ! $(df -h | grep -q /mnt/data); then sudo rm -rfv /mnt/data; sleep 1s && ( export ssd=`lsblk | grep 1.8T | sed -e "s/\s.*$//"` ; echo $ssd ; sudo mkfs -t ext4 /dev/$ssd; sudo mkdir /mnt/data; sudo mount /dev/$ssd /mnt/data; sudo chown -R ubuntu:ubuntu /mnt/data/ ); fi';
+    ssh testnet"$1" 'sudo apt install -y protobuf-compiler golang-goprotobuf-dev && sudo ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime && date';
+    ssh testnet"$1" "if [ ! -f /etc/logrotate-fantom.conf ]; then cat <<EOT | sudo tee /etc/logrotate-fantom.conf
+/var/log/syslog
+{
+	rotate 14
+	compress
+	maxsize 500M
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
 }
+EOT
+sudo cp /etc/cron.daily/logrotate /etc/cron.hourly/ && sudo sed -i 's/logrotate.conf/logrotate-fantom.conf/' /etc/cron.hourly/logrotate && sudo service rsyslog rotate ; fi"
+}
+
+# use these commands for debug ona single node
+#init "0" && deploy "0"
+#exit
 
 for i in "${!nodes[@]}"; do
     init "$i" && deploy "$i" &
