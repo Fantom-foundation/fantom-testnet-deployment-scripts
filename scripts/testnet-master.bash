@@ -39,6 +39,8 @@ function deploy() {
 
 function init() {
     ssh testnet"$1" 'if ! $(df -h | grep -q /mnt/data); then sudo rm -rfv /mnt/data; sleep 1s && ( export ssd=`lsblk | grep 1.8T | sed -e "s/\s.*$//"` ; echo $ssd ; sudo mkfs -t ext4 /dev/$ssd; sudo mkdir /mnt/data; sudo mount /dev/$ssd /mnt/data; sudo chown -R ubuntu:ubuntu /mnt/data/ ); fi';
+    # slash down existing badger db for dag1; a temporary solution for consensus crash on startup with existing database
+    ssh testnet"$1" "if [ -d /mnt/data/dag1_data_dir/$1/badger_db ]; then sudo rm -rf /mnt/data/dag1_data_dir/$1/badger_db; fi";
     ssh testnet"$1" 'sudo apt install -y protobuf-compiler golang-goprotobuf-dev && sudo ln -sf /usr/share/zoneinfo/Australia/Sydney /etc/localtime && date';
     ssh testnet"$1" "if [ ! -f /etc/logrotate-fantom.conf ]; then cat <<EOT | sudo tee /etc/logrotate-fantom.conf
 /var/log/syslog
