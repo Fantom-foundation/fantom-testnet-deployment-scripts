@@ -13,25 +13,33 @@ declare -r go_lachesis_branch='master'
 declare -r evm_branch="${BRANCH:-master}"
 
 function deploy() {
+  declare -r go_lachesis='dag1';
+  declare -r go_evm='go-evm';
+  declare -r lachesis_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_lachesis";
+  declare -r evm_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_evm";
+
   printf 'Deploying testnet%d [%s]:\n' "$1" "${nodes[$1]}";
 
+  # stop services if they are running
+  ssh testnet"$1" "sudo systemctl stop $go_evm 2>/dev/null"
+  ssh testnet"$1" "sudo systemctl stop $go_lachesis 2>/dev/null"
+  
   # Config
   rsync -avz "$parent_dir"/scripts/testnet.bash testnet"$1":/home/ubuntu/go/src/github.com/SamuelMarks/dag1/scripts/;
   rsync -avz "$parent_dir"/testnet/dag1_data_dir testnet"$1":/mnt/data/ --rsync-path='sudo rsync';
-  ssh testnet"$1" "mkdir -p ~/.evm/eth" | sed "s/^/[${nodes[$1]}] /";
+  ssh testnet"$1" "mkdir -p /mnt/data/evm/eth; rm -rf ~/.evm ; ln -sf /mnt/data/evm ~/.evm";
+  rsync -avz "$parent_dir"/testnet/eth/"$1"/ testnet"$1":/mnt/data/evm/eth --rsync-path='sudo rsync';
+  #  ssh testnet"$1" "mkdir -p ~/.evm/eth" | sed "s/^/[${nodes[$1]}] /";
+  ssh testnet"$1" "mv ~/.evm/eth/evml.toml ~/.evm/; ";
   rsync -avz "$parent_dir"/testnet/genesis.json testnet"$1":/home/ubuntu/.evm/eth/;
 
   # Lachesis
-  declare -r go_lachesis='dag1';
-  declare -r lachesis_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_lachesis";
   env -i PATH="$PATH" DATAL_DIR='/mnt/data' BUILD_DIR="$lachesis_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/dag1.tpl.service > "$parent_dir"/"$go_lachesis_service_file"."$1";
   rsync -avz "$parent_dir"/"$go_lachesis_service_file"."$1" testnet"$1":/mnt/data/"$go_lachesis_service_file";
   ssh testnet"$1" "cd $lachesis_dir; git clean -fd && git checkout $go_lachesis_branch && git pull && make clean vendor proto build; sudo mv /mnt/data/$go_lachesis_service_file /lib/systemd/system/;
   sudo systemctl daemon-reload && ( sudo systemctl stop $go_lachesis 2>/dev/null; sudo systemctl start $go_lachesis; )" | sed "s/^/[${nodes[$1]}] /";
 
   # EVM
-  declare -r go_evm='go-evm';
-  declare -r evm_dir='/home/ubuntu/go/src/github.com/SamuelMarks/'"$go_evm";
   env -i PATH="$PATH" BUILD_DIR="$evm_dir/build" NODE="$1" NODE_ADDR="${nodes[$1]}" envsubst < "$parent_dir"/go-evm.tpl.service > "$parent_dir"/"$evm_service_file"."$1";
   rsync -avz "$parent_dir"/"$evm_service_file"."$1" testnet"$1":/mnt/data/"$evm_service_file";
   ssh testnet"$1" "cd $evm_dir; git clean -fd && git checkout $evm_branch && git pull && make clean vendor build; sudo mv /mnt/data/$evm_service_file /lib/systemd/system/; sudo systemctl daemon-reload && ( sudo systemctl stop $go_evm 2>/dev/null; sudo systemctl start $go_evm )" | sed "s/^/[${nodes[$1]}] /";
