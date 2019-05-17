@@ -1,0 +1,20 @@
+[Unit]
+Description=BFT Consensus platform for distributed applications.
+After=syslog.target network.target
+
+[Service]
+Type=simple
+PIDFile=/var/run/dag1.pid
+Environment=BUILD_DIR=$BUILD_DIR
+Environment=DATAL_DIR=$DATAL_DIR
+Environment=node=$NODE
+Environment=node_addr=$NODE_ADDR
+Environment=GOPATH=/home/ubuntu/go
+Environment=GOMAXPROCS=2
+WorkingDirectory=$BUILD_DIR
+ExecStart=$BUILD_DIR/dag1 run --datadir "$DATAL_DIR/dag1_data_dir" --store --listen="$NODE_ADDR":12000 --log=warn --heartbeat=5s -p "$NODE_ADDR":9000 -s "$NODE_ADDR":9090 --pidfile /var/run/dag1.pid
+ExecStop=pkill -SIGTERM -F /var/run/dag1.pid
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

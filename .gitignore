@@ -1,0 +1,5 @@
+.DS_Store
+go-lachesis.service*
+go-evm.service*
+dag1.service*
+*~
