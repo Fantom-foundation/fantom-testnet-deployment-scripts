@@ -1,5 +1,0 @@
-[lachesis]
-store = true
-heartbeat = "50ms"
-timeout = "200ms"
-listen = "172.31.5.183:12000"
